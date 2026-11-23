@@ -1,10 +1,11 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const { PrismaClient } = require('@prisma/client');
+const prisma = require('./db');
+const authRoutes = require('./routes/auth');
+const monitorRoutes = require('./routes/monitors');
 
 const app = express();
-const prisma = new PrismaClient();
 const PORT = process.env.PORT || 4000;
 
 app.use(cors());
@@ -17,6 +18,14 @@ app.get('/health', async (_req, res) => {
   } catch (err) {
     res.status(503).json({ status: 'error', database: 'disconnected', message: err.message });
   }
+});
+
+app.use('/api/auth', authRoutes);
+app.use('/api/monitors', monitorRoutes);
+
+app.use((err, _req, res, _next) => {
+  console.error(err);
+  res.status(500).json({ error: 'Internal server error' });
 });
 
 if (require.main === module) {
