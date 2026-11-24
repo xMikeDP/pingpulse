@@ -4,6 +4,7 @@ const cors = require('cors');
 const prisma = require('./db');
 const authRoutes = require('./routes/auth');
 const monitorRoutes = require('./routes/monitors');
+const { startWorker } = require('./worker/pinger');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -29,9 +30,20 @@ app.use((err, _req, res, _next) => {
 });
 
 if (require.main === module) {
-  app.listen(PORT, () => {
+  const stopWorker = startWorker();
+  const server = app.listen(PORT, () => {
     console.log(`PingPulse backend listening on port ${PORT}`);
   });
+
+  const shutdown = () => {
+    stopWorker();
+    server.close(() => {
+      prisma.$disconnect().finally(() => process.exit(0));
+    });
+  };
+
+  process.on('SIGINT', shutdown);
+  process.on('SIGTERM', shutdown);
 }
 
 module.exports = { app, prisma };
